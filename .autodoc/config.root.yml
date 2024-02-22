@@ -1,0 +1,9 @@
+package_dir: .
+templates:
+  templates_dir: ".autodoc"
+  link_construction: "github"
+  custom_vars:
+    - name=PiHole Exporter
+    - is-root
+    - created-command=autodoc -config .autodoc/config.root.yml > README.md
+  import_path: github.com/projectbadger/pihole_exporter

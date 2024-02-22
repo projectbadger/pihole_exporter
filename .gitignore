@@ -1,0 +1,4 @@
+pihole_exporter
+pihole_exporter-*
+releases/
+*.log
