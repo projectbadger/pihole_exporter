@@ -41,13 +41,13 @@ jobs:
       run: go test -v ./...
     
     - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            release/linux/amd64/pihole_exporter-linux-amd64
-            release/linux/arm64/pihole_exporter-linux-arm64
-            release/linux/arm/pihole_exporter-linux-arm
-            release/windows/amd64/pihole_exporter-windows-amd64
-            release/darwin/amd64/pihole_exporter-darwin-amd64
-            release/darwin/arm64/pihole_exporter-darwin-arm64
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          release/linux/amd64/pihole_exporter-linux-amd64
+          release/linux/arm64/pihole_exporter-linux-arm64
+          release/linux/arm/pihole_exporter-linux-arm
+          release/windows/amd64/pihole_exporter-windows-amd64
+          release/darwin/amd64/pihole_exporter-darwin-amd64
+          release/darwin/arm64/pihole_exporter-darwin-arm64
