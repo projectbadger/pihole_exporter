@@ -17,7 +17,7 @@ type Metrics struct {
 	ReplyNXDOMAIN        float64            `json:"reply_NXDOMAIN,omitempty"`
 	ReplyCNAME           float64            `json:"reply_CNAME,omitempty"`
 	ReplyIP              float64            `json:"reply_IP,omitempty"`
-	ReplyDomain          float64            `json:"reply_DOMAIN,omitempty"`
+	ReplyDOMAIN          float64            `json:"reply_DOMAIN,omitempty"`
 	ReplyRRNAME          float64            `json:"reply_RRNAME,omitempty"`
 	ReplySERVFAIL        float64            `json:"reply_SERVFAIL,omitempty"`
 	ReplyREFUSED         float64            `json:"reply_REFUSED,omitempty"`
@@ -43,11 +43,12 @@ func (m *Metrics) GetRepliesMap() map[string]float64 {
 		return nil
 	}
 	replies := make(map[string]float64)
+	replies["UNKNOWN"] = m.ReplyUNKNOWN
 	replies["NODATA"] = m.ReplyNODATA
 	replies["NXDOMAIN"] = m.ReplyNXDOMAIN
 	replies["CNAME"] = m.ReplyCNAME
 	replies["IP"] = m.ReplyIP
-	replies["Domain"] = m.ReplyDomain
+	replies["DOMAIN"] = m.ReplyDOMAIN
 	replies["RRNAME"] = m.ReplyRRNAME
 	replies["SERVFAIL"] = m.ReplySERVFAIL
 	replies["REFUSED"] = m.ReplyREFUSED

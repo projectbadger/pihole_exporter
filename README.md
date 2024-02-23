@@ -57,6 +57,9 @@ pihole_domains_being_blocked 154587
 # HELP pihole_privacy_level Privacy level
 # TYPE pihole_privacy_level gauge
 pihole_privacy_level 0
+# HELP pihole_status Status
+# TYPE pihole_status gauge
+pihole_privacy_level 0
 # HELP pihole_queries_cached Cached queries
 # TYPE pihole_queries_cached gauge
 pihole_queries_cached 55653
@@ -99,12 +102,10 @@ pihole_exporter -
       Pihole basic auth username
 -pihole.listen-address string
       Pihole endpoint URL
+-pihole.num-results int
+      Number of results returned for each query
 -pihole.tls.ca-certificate string
       CA certificate to trust when connecting to Pihole
--pihole.tls.certificate string
-      Pihole mTLS certificate
--pihole.tls.key string
-      Pihole mTLS private key
 -version
       print version and exit
 -web.basic-auth.password string

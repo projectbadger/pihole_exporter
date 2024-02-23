@@ -18,14 +18,14 @@ const (
 	metricDNSQueriesAllTypesName   = "dns_queries_all_types"
 	metricDNSQueriesAllRepliesName = "dns_queries_all_replies"
 	metricPrivacyLevelName         = "privacy_level"
-	// metricStatusName               = "status"
-	metricTopQueriesName          = "top_queries"
-	metricTopAdsName              = "top_ads"
-	metricTopSourcesName          = "top_sources"
-	metricForwardDestinationsName = "forward_destinations"
-	metricQueryTypesName          = "query_types"
-	metricRepliesName             = "replies"
-	metricGravityLastUpdatedName  = "gravity_last_updated"
+	metricStatusName               = "status"
+	metricTopQueriesName           = "top_queries"
+	metricTopAdsName               = "top_ads"
+	metricTopSourcesName           = "top_sources"
+	metricForwardDestinationsName  = "forward_destinations"
+	metricQueryTypesName           = "query_types"
+	metricRepliesName              = "replies"
+	metricGravityLastUpdatedName   = "gravity_last_updated"
 	// Metrics descriptions
 	metricDomainsBeingBlockedDescription  = "Domains being blocked today"
 	metricDNSQueriesTodayDescription      = "DNS queries today"
@@ -39,14 +39,14 @@ const (
 	metricDNSQueriesAllTypesDescription   = "DNS queries all types"
 	metricDNSQueriesAllRepliesDescription = "DNS queries all replies"
 	metricPrivacyLevelDescription         = "Privacy level"
-	// metricStatusDescription               = "Status"
-	metricTopQueriesDescription          = "Top queries"
-	metricTopAdsDescription              = "Top ads"
-	metricTopSourcesDescription          = "Top sources"
-	metricForwardDestinationsDescription = "Forward destinations"
-	metricQueryTypesDescription          = "DNS query types"
-	metricRepliesDescription             = "DNS Replies"
-	metricGravityLastUpdatedDescription  = "gravity_last_updated"
+	metricStatusDescription               = "PiHole Status; 0: disabled, 1: enabled"
+	metricTopQueriesDescription           = "Top queries"
+	metricTopAdsDescription               = "Top ads"
+	metricTopSourcesDescription           = "Top sources"
+	metricForwardDestinationsDescription  = "Forward destinations"
+	metricQueryTypesDescription           = "DNS query types"
+	metricRepliesDescription              = "DNS Replies"
+	metricGravityLastUpdatedDescription   = "gravity_last_updated"
 )
 
 // metrics holds all the prometheus.Desc metrics descriptions.
@@ -63,14 +63,14 @@ type metrics struct {
 	dnsQueriesAllTypes   *prometheus.Desc
 	dnsQueriesAllReplies *prometheus.Desc
 	privacyLevel         *prometheus.Desc
-	// status               *prometheus.Desc
-	topQueries          *prometheus.Desc
-	topAds              *prometheus.Desc
-	topSources          *prometheus.Desc
-	forwardDestinations *prometheus.Desc
-	queryTypes          *prometheus.Desc
-	replies             *prometheus.Desc
-	gravityLastUpdated  *prometheus.Desc
+	status               *prometheus.Desc
+	topQueries           *prometheus.Desc
+	topAds               *prometheus.Desc
+	topSources           *prometheus.Desc
+	forwardDestinations  *prometheus.Desc
+	queryTypes           *prometheus.Desc
+	replies              *prometheus.Desc
+	gravityLastUpdated   *prometheus.Desc
 }
 
 // NewMetrics returns a new *metrics struct holding all of
@@ -137,16 +137,16 @@ func NewMetrics() *metrics {
 			metricPrivacyLevelDescription,
 			nil, nil,
 		),
+		status: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", metricStatusName),
+			metricStatusDescription,
+			nil, nil,
+		),
 		gravityLastUpdated: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", metricGravityLastUpdatedName),
 			metricGravityLastUpdatedDescription,
 			nil, nil,
 		),
-		// status: prometheus.NewDesc(
-		// 	prometheus.BuildFQName(namespace, "", metricStatusName),
-		// 	metricStatusDescription,
-		// 	nil, nil,
-		// ),
 		topQueries: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", metricTopQueriesName),
 			metricTopQueriesDescription,
@@ -199,7 +199,7 @@ func (m *metrics) Describe(ch chan<- *prometheus.Desc) {
 	ch <- m.dnsQueriesAllReplies
 	ch <- m.privacyLevel
 	ch <- m.gravityLastUpdated
-	// ch <- m.status
+	ch <- m.status
 	ch <- m.topQueries
 	ch <- m.topAds
 	ch <- m.topSources

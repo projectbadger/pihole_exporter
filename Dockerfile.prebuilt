@@ -3,7 +3,7 @@ FROM alpine:latest
 LABEL summary="PiHole Exporter Docker image" \
       description="Prometheus Exporter for PiHole" \
       name="github.com/projectbadger/pihole_exporter" \
-      version="v0.1.0" \
+      version="dev" \
       url="https://github.com/projectbadger/pihole_exporter"
 
 COPY release/linux/amd64/pihole_exporter-linux-amd64 /app/pihole_exporter

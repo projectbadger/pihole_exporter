@@ -7,8 +7,8 @@ import pihole_exporter/server
 
 ## Server
 
-Server configures and runs a *http.Server with the provided config.Config configuration.
-It servers metrics on the provided metrics path.
+Server configures and runs a *http.Server with the provided *config.Config configuration.
+It serves metrics on the provided metrics path.
 
 ## Index
 

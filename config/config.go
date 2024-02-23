@@ -53,89 +53,20 @@ func NewConfig() (*Config, error) {
 		Pihole: &Pihole{TLS: &TLS{}, BasicAuth: &BasicAuth{}},
 		Log:    &Log{},
 	}
-	cfg.parseFlags()
+	cfg.parseFlags(os.Args[0], os.Args[1:])
+	cfg.validate()
 
 	if cfg.Config == "" {
 		return cfg, setupSLog(cfg)
 	}
 
-	f, err := readConfigFile(cfg.Config)
+	cfgFromFile, err := readConfigFile(cfg.Config)
 	if err != nil {
 		slog.Error("error reading config file", "config", err.Error())
 		return nil, err
 	}
-	cfgFromFile, err := yamlToConfig(f)
-	if err != nil {
-		slog.Error("error unmarshaling config file", "config", err.Error())
-		return nil, err
-	}
-	// Web
-	if cfgFromFile.Web == nil {
-		cfgFromFile.Web = &Web{}
-	}
-	if cfgFromFile.Web.BasicAuth == nil {
-		cfgFromFile.Web.BasicAuth = &BasicAuth{}
-	}
-	if cfg.Web.ListenAddress != "" {
-		cfgFromFile.Web.ListenAddress = cfg.Web.ListenAddress
-	}
-	if cfg.Web.BasicAuth.IsBasicAuth() {
-		cfgFromFile.Web.BasicAuth = cfg.Web.BasicAuth
-	}
-	if cfg.Web.MetricsPath != "" {
-		cfgFromFile.Web.MetricsPath = cfg.Web.MetricsPath
-	}
-	if cfgFromFile.Web.TLS == nil {
-		cfgFromFile.Web.TLS = &TLS{}
-	}
-	if cfg.Web.TLS.CACertificate != "" {
-		cfgFromFile.Web.TLS.CACertificate = cfg.Web.TLS.CACertificate
-	}
-	if cfg.Web.TLS.Certificate != "" {
-		cfgFromFile.Web.TLS.Certificate = cfg.Web.TLS.Certificate
-	}
-	if cfg.Web.TLS.Key != "" {
-		cfgFromFile.Web.TLS.Key = cfg.Web.TLS.Key
-	}
-	// Pihole
-	if cfgFromFile.Pihole == nil {
-		cfgFromFile.Pihole = &Pihole{}
-	}
-	if cfg.Pihole.Listen != "" {
-		cfgFromFile.Pihole.Listen = cfg.Pihole.Listen
-	}
-	if cfg.Pihole.BasicAuth.IsBasicAuth() {
-		cfgFromFile.Pihole.BasicAuth = cfg.Pihole.BasicAuth
-	}
-	if cfgFromFile.Pihole.TLS == nil {
-		cfgFromFile.Pihole.TLS = &TLS{}
-	}
-	if cfg.Pihole.TLS.CACertificate != "" {
-		cfgFromFile.Pihole.TLS.CACertificate = cfg.Pihole.TLS.CACertificate
-	}
-	if cfg.Pihole.TLS.Certificate != "" {
-		cfgFromFile.Pihole.TLS.Certificate = cfg.Pihole.TLS.Certificate
-	}
-	if cfg.Pihole.TLS.Key != "" {
-		cfgFromFile.Pihole.TLS.Key = cfg.Pihole.TLS.Key
-	}
-	if cfgFromFile.Pihole.NumResults < 1 ||
-		(cfg.Pihole.NumResults > 0 && cfg.Pihole.NumResults != 30) {
-		cfgFromFile.Pihole.TLS.Key = cfg.Pihole.TLS.Key
-	}
-	// Log
-	if cfgFromFile.Log == nil {
-		cfgFromFile.Log = &Log{}
-	}
-	if cfg.Log.Bare {
-		cfgFromFile.Log.Bare = cfg.Log.Bare
-	}
-	if cfg.Log.Output != "" {
-		cfgFromFile.Log.Output = cfg.Log.Output
-	}
-	if cfg.Log.Level != "" {
-		cfgFromFile.Log.Level = cfg.Log.Level
-	}
+
+	cfgFromFile = overwriteConfig(cfgFromFile, cfg)
 
 	if err := setupSLog(cfg); err != nil {
 		slog.Error("Error setting up logging", "error", err)
@@ -147,48 +78,61 @@ func NewConfig() (*Config, error) {
 
 // parseFlags sets the flags using flag package, parses them and
 // checks for version and help flags.
-func (cfg *Config) parseFlags() {
+func (cfg *Config) parseFlags(name string, args []string) {
 	if cfg == nil {
 		panic("config is nil")
 	}
+	flagSet := flag.NewFlagSet(name, flag.ExitOnError)
 	// General
-	flag.BoolVar(&cfg.Version, "version", false, "print version and exit")
-	flag.BoolVar(&cfg.Debug, "debug", false, "print verbose debugging information")
-	flag.StringVar(&cfg.Config, "config", "", "Path to a config file")
+	flagSet.BoolVar(&cfg.Version, "version", false, "print version and exit")
+	flagSet.BoolVar(&cfg.Debug, "debug", false, "print verbose debugging information")
+	flagSet.StringVar(&cfg.Config, "config", "", "Path to a config file")
 	// Web
-	flag.StringVar(&cfg.Web.ListenAddress, "web.listen-address", ":9311", "Metrics server listener address")
-	flag.StringVar(&cfg.Web.MetricsPath, "web.metrics-path", "/metrics", "URL path on which metrics are exposed")
-	flag.StringVar(&cfg.Web.TLS.Certificate, "web.tls.certificate", "", "Metrics server TLS certificate")
-	flag.StringVar(&cfg.Web.TLS.Key, "web.tls.key", "", "Metrics server TLS private key")
-	flag.StringVar(&cfg.Web.BasicAuth.Username, "web.basic-auth.username", "", "Web server basic auth username")
-	flag.StringVar(&cfg.Web.BasicAuth.Password, "web.basic-auth.password", "", "Web server basic auth password")
+	flagSet.StringVar(&cfg.Web.ListenAddress, "web.listen-address", ":9311", "Metrics server listener address")
+	flagSet.StringVar(&cfg.Web.MetricsPath, "web.metrics-path", "/metrics", "URL path on which metrics are exposed")
+	flagSet.StringVar(&cfg.Web.TLS.Certificate, "web.tls.certificate", "", "Metrics server TLS certificate")
+	flagSet.StringVar(&cfg.Web.TLS.Key, "web.tls.key", "", "Metrics server TLS private key")
+	flagSet.StringVar(&cfg.Web.BasicAuth.Username, "web.basic-auth.username", "", "Web server basic auth username")
+	flagSet.StringVar(&cfg.Web.BasicAuth.Password, "web.basic-auth.password", "", "Web server basic auth password")
 	// Pihole
-	flag.StringVar(&cfg.Pihole.Listen, "pihole.listen-address", "", "Pihole endpoint URL")
-	flag.StringVar(&cfg.Pihole.TLS.CACertificate, "pihole.tls.ca-certificate", "", "CA certificate to trust when connecting to Pihole")
-	// flag.StringVar(&cfg.Pihole.TLS.Certificate, "pihole.tls.certificate", "", "Pihole mTLS certificate")
-	// flag.StringVar(&cfg.Pihole.TLS.Key, "pihole.tls.key", "", "Pihole mTLS private key")
-	flag.StringVar(&cfg.Pihole.BasicAuth.Username, "pihole.basic-auth.username", "", "Pihole basic auth username")
-	flag.StringVar(&cfg.Pihole.BasicAuth.Password, "pihole.basic-auth.password", "", "Pihole basic auth password")
-	flag.StringVar(&cfg.Pihole.APIToken, "pihole.api-token", "", "Pihole API token for authentication")
-	flag.Int64Var(&cfg.Pihole.NumResults, "pihole.num-results", 30, "Number of results returned for each query\n(top domains, top queries...)")
+	flagSet.StringVar(&cfg.Pihole.ListenAddress, "pihole.listen-address", "", "Pihole endpoint URL")
+	flagSet.StringVar(&cfg.Pihole.TLS.CACertificate, "pihole.tls.ca-certificate", "", "CA certificate to trust when connecting to Pihole")
+	// flagSet.StringVar(&cfg.Pihole.TLS.Certificate, "pihole.tls.certificate", "", "Pihole mTLS certificate")
+	// flagSet.StringVar(&cfg.Pihole.TLS.Key, "pihole.tls.key", "", "Pihole mTLS private key")
+	flagSet.StringVar(&cfg.Pihole.BasicAuth.Username, "pihole.basic-auth.username", "", "Pihole basic auth username")
+	flagSet.StringVar(&cfg.Pihole.BasicAuth.Password, "pihole.basic-auth.password", "", "Pihole basic auth password")
+	flagSet.StringVar(&cfg.Pihole.APIToken, "pihole.api-token", "", "Pihole API token for authentication")
+	flagSet.Int64Var(&cfg.Pihole.NumResults, "pihole.num-results", 30, "Number of results returned for each query\n(top domains, top queries...)")
 	// Log
-	flag.StringVar(&cfg.Log.Format, "log.format", "", "Logging format: [ text | json ]\ndefault: text")
-	flag.StringVar(&cfg.Log.Output, "log.output", "", "Logging output: [ stdout | /path/to/file.log ]\ndefault: stdout")
-	flag.StringVar(&cfg.Log.Level, "log.level", "info", "Logging level: [ info | warn | error | debug ]\ndefault: info")
-	flag.BoolVar(&cfg.Log.Bare, "log.bare", false, "Hide log level and timestamps when logging")
-	flag.Usage = func() {
+	flagSet.StringVar(&cfg.Log.Format, "log.format", "", "Logging format: [ text | json ]\ndefault: text")
+	flagSet.StringVar(&cfg.Log.Output, "log.output", "", "Logging output: [ stdout | /path/to/file.log ]\ndefault: stdout")
+	flagSet.StringVar(&cfg.Log.Level, "log.level", "info", "Logging level: [ info | warn | error | debug ]\ndefault: info")
+	flagSet.BoolVar(&cfg.Log.Bare, "log.bare", false, "Hide log level and timestamps when logging")
+	flagSet.Usage = func() {
 		fmt.Printf(banner, Version)
-		flag.PrintDefaults()
+		flagSet.PrintDefaults()
 	}
 
-	flag.Parse()
+	flagSet.Parse(args)
+}
+
+// validate checks config for version and help flags and exists if
+// found. Also checks for presence of exporter listen address.
+func (cfg *Config) validate() {
+	if cfg == nil {
+		return
+	}
 	if cfg.Version {
 		fmt.Printf("%s", Version)
 		os.Exit(0)
 	}
 
 	if cfg.Web.ListenAddress == "" {
-		cfg.printHelpAndExit("Pihole listen address must be defined", 1)
+		cfg.printHelpAndExit("Web listen address must be defined", 1)
+	}
+
+	if cfg.Pihole.ListenAddress == "" {
+		cfg.printHelpAndExit("Pihole server address must be defined", 1)
 	}
 }
 
@@ -201,6 +145,112 @@ func (cfg *Config) printHelpAndExit(message string, exitCode int) {
 	}
 	flag.Usage()
 	os.Exit(exitCode)
+}
+
+// overwriteConfig overwrites baseConfig with non-default values
+// from overridingConfig and returns the result.
+func overwriteConfig(baseConfig, overridingConfig *Config) *Config {
+	// Web
+	if baseConfig.Web == nil {
+		baseConfig.Web = &Web{}
+	}
+	if baseConfig.Web.BasicAuth == nil {
+		baseConfig.Web.BasicAuth = &BasicAuth{}
+	}
+	if overridingConfig.Web.ListenAddress != "" {
+		baseConfig.Web.ListenAddress = overridingConfig.Web.ListenAddress
+	}
+	if overridingConfig.Web.BasicAuth.IsBasicAuth() {
+		baseConfig.Web.BasicAuth = overridingConfig.Web.BasicAuth
+	}
+	if overridingConfig.Web.MetricsPath != "" {
+		baseConfig.Web.MetricsPath = overridingConfig.Web.MetricsPath
+	}
+	if baseConfig.Web.TLS == nil {
+		baseConfig.Web.TLS = &TLS{}
+	}
+	if overridingConfig.Web.TLS.CACertificate != "" {
+		baseConfig.Web.TLS.CACertificate = overridingConfig.Web.TLS.CACertificate
+	}
+	if overridingConfig.Web.TLS.Certificate != "" {
+		baseConfig.Web.TLS.Certificate = overridingConfig.Web.TLS.Certificate
+	}
+	if overridingConfig.Web.TLS.Key != "" {
+		baseConfig.Web.TLS.Key = overridingConfig.Web.TLS.Key
+	}
+	// Pihole
+	if baseConfig.Pihole == nil {
+		baseConfig.Pihole = &Pihole{}
+	}
+	if overridingConfig.Pihole.ListenAddress != "" {
+		baseConfig.Pihole.ListenAddress = overridingConfig.Pihole.ListenAddress
+	}
+	if overridingConfig.Pihole.BasicAuth.IsBasicAuth() {
+		baseConfig.Pihole.BasicAuth = overridingConfig.Pihole.BasicAuth
+	}
+	if baseConfig.Pihole.TLS == nil {
+		baseConfig.Pihole.TLS = &TLS{}
+	}
+	if overridingConfig.Pihole.TLS.CACertificate != "" {
+		baseConfig.Pihole.TLS.CACertificate = overridingConfig.Pihole.TLS.CACertificate
+	}
+	if overridingConfig.Pihole.TLS.Certificate != "" {
+		baseConfig.Pihole.TLS.Certificate = overridingConfig.Pihole.TLS.Certificate
+	}
+	if overridingConfig.Pihole.TLS.Key != "" {
+		baseConfig.Pihole.TLS.Key = overridingConfig.Pihole.TLS.Key
+	}
+	if baseConfig.Pihole.NumResults < 1 ||
+		(overridingConfig.Pihole.NumResults > 0 && overridingConfig.Pihole.NumResults != 30) {
+		baseConfig.Pihole.TLS.Key = overridingConfig.Pihole.TLS.Key
+	}
+	// Log
+	if baseConfig.Log == nil {
+		baseConfig.Log = &Log{}
+	}
+	if overridingConfig.Log.Bare {
+		baseConfig.Log.Bare = overridingConfig.Log.Bare
+	}
+	if overridingConfig.Log.Output != "" {
+		baseConfig.Log.Output = overridingConfig.Log.Output
+	}
+	if overridingConfig.Log.Level != "" {
+		baseConfig.Log.Level = overridingConfig.Log.Level
+	}
+	return baseConfig
+}
+
+// yamlToConfig unmarshals a JSON byte array into a new Config.
+func yamlToConfig(configBytes []byte) (c *Config, err error) {
+	c = &Config{}
+	err = yaml.Unmarshal(configBytes, c)
+	return
+}
+
+// readFile reads a file from the provided file path.
+func readFile(path string) (content []byte, err error) {
+	stat, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if stat.IsDir() {
+		return nil, errFileIsDir
+	}
+	content, err = os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading file: %s", err.Error())
+	}
+	return
+}
+
+// readFile reads a file from the provided file path.
+func readConfigFile(path string) (config *Config, err error) {
+	f, err := readFile(path)
+	if err != nil {
+		return nil, err
+	}
+	config, err = yamlToConfig(f)
+	return
 }
 
 // Web holds PiHole exporter metrics server configuration data.
@@ -239,7 +289,7 @@ func (cfg *Web) IsBasicAuth() bool {
 // Pihole holds PiHole server configuration data.
 type Pihole struct {
 	// PiHole server address
-	Listen string `yaml:"listen,omitempty"`
+	ListenAddress string `yaml:"listen_address,omitempty"`
 	// TLS config for PiHole server connection
 	TLS *TLS `yaml:"tls,omitempty"`
 	// Basic auth config for PiHole server connection
@@ -261,8 +311,8 @@ func (cfg *Pihole) IsTLS() bool {
 	return (cfg.TLS != nil &&
 		(cfg.TLS.CACertificate != "" ||
 			cfg.TLS.Insecure)) &&
-		(!strings.HasPrefix(cfg.Listen, "unix://") &&
-			!strings.HasPrefix(cfg.Listen, "http://"))
+		(!strings.HasPrefix(cfg.ListenAddress, "unix://") &&
+			!strings.HasPrefix(cfg.ListenAddress, "http://"))
 }
 
 const (
@@ -289,13 +339,30 @@ func (cfg *Pihole) IsBasicAuth() bool {
 // TLS holds TLS configuration.
 type TLS struct {
 	// Path to a root CA certificate
-	CACertificate string `yaml:"ca_certificate.omitempty"`
+	CACertificate string `yaml:"ca_certificate,omitempty"`
 	// Path to a server or client certificate
-	Certificate string `yaml:"certificate.omitempty"`
+	Certificate string `yaml:"certificate,omitempty"`
 	// Path to a certificate private key
-	Key string `yaml:"key.omitempty"`
+	Key string `yaml:"key,omitempty"`
 	// Do not verify TLS certificate validity
-	Insecure bool `yaml:"insecure.omitempty"`
+	Insecure bool `yaml:"insecure,omitempty"`
+}
+
+// IsSet returns if TLS config is set for TLS
+func (cfg *TLS) IsTLS() bool {
+	if cfg == nil {
+		return false
+	}
+	if cfg.Insecure {
+		return true
+	}
+	if cfg.CACertificate != "" {
+		return true
+	}
+	if cfg.Certificate != "" && cfg.Key != "" {
+		return true
+	}
+	return false
 }
 
 // BasicAuth holds basic auth configuration.
@@ -303,6 +370,13 @@ type TLS struct {
 type BasicAuth struct {
 	Username string `yaml:"username,omitempty"`
 	Password string `yaml:"password,omitempty"`
+}
+
+// IsBasicAuth returns true if both username and password is set,
+func (a *BasicAuth) IsBasicAuth() bool {
+	return a != nil &&
+		a.Username != "" &&
+		a.Password != ""
 }
 
 // Log holds logging configuration.
@@ -332,34 +406,4 @@ func (l *Log) SLogLevel() slog.Level {
 		return 0
 	}
 	return slog.LevelInfo
-}
-
-// IsBasicAuth returns true if both username and password is set,
-func (a *BasicAuth) IsBasicAuth() bool {
-	return a != nil &&
-		a.Username != "" &&
-		a.Password != ""
-}
-
-// yamlToConfig unmarshals a JSON byte array into a new Config.
-func yamlToConfig(configBytes []byte) (c *Config, err error) {
-	c = &Config{}
-	err = yaml.Unmarshal(configBytes, c)
-	return
-}
-
-// readConfigFile reads a file from the provided file path.
-func readConfigFile(path string) (content []byte, err error) {
-	stat, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-	if stat.IsDir() {
-		return nil, errFileIsDir
-	}
-	content, err = os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading file: %s", err.Error())
-	}
-	return
 }

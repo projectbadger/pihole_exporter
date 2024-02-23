@@ -30,7 +30,7 @@ func NewMetrics() *metrics
 ```
 
 
-## type [Exporter](<exporter.go#L14>)
+## type [Exporter](<exporter.go#L19>)
 
 Exporter collects Pihole metrics from the given address and
 exports them using the Prometheus metrics package.
@@ -42,7 +42,7 @@ type Exporter struct {
 }
 ```
 
-## func [NewExporter() (Exporter, error)](<exporter.go#L21>)
+## func [NewExporter() (Exporter, error)](<exporter.go#L26>)
 
 NewExporter returns an initialized Exporter.
 
@@ -51,7 +51,7 @@ NewExporter returns an initialized Exporter.
 func NewExporter(cfg *config.Config) (*Exporter, error)
 ```
 
-## func (*Exporter) [Collect()](<exporter.go#L41>)
+## func (*Exporter) [Collect()](<exporter.go#L52>)
 
 Collect collects the metrics from the channel and sends them
 as Prometheus metrics.
@@ -60,7 +60,7 @@ as Prometheus metrics.
 ```go
 func (e *Exporter) Collect(ch chan<- prometheus.Metric)
 ```
-## func (*Exporter) [Describe()](<exporter.go#L35>)
+## func (*Exporter) [Describe()](<exporter.go#L43>)
 
 Describe publishes all of the collected PiHole metrics to the
 provided channel by calling the underlying *metrics.Describe(ch).
@@ -69,7 +69,7 @@ provided channel by calling the underlying *metrics.Describe(ch).
 ```go
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc)
 ```
-## func (*Exporter) [Register()](<exporter.go#L93>)
+## func (*Exporter) [Register()](<exporter.go#L108>)
 
 Register registers metrics in the prometheus package.
 

@@ -22,6 +22,7 @@ Config package provides the Config type that holds all the configuration data fo
   - [IsBasicAuth() bool](#func-pihole-isbasicauth-bool)
   - [IsTLS() bool](#func-pihole-istls-bool)
 - [type TLS](#type-tls)
+  - [IsTLS() bool](#func-tls-istls-bool)
 - [type Web](#type-web)
   - [IsBasicAuth() bool](#func-web-isbasicauth-bool)
   - [IsTLS() bool](#func-web-istls-bool)
@@ -39,7 +40,7 @@ var (
 ```
 
 
-## type [BasicAuth](<config.go#L303>)
+## type [BasicAuth](<config.go#L370>)
 
 BasicAuth holds basic auth configuration.
 Basic auth applies if both fields are not empty.
@@ -50,7 +51,7 @@ type BasicAuth struct {
 }
 ```
 
-## func (*BasicAuth) [IsBasicAuth() bool](<config.go#L338>)
+## func (*BasicAuth) [IsBasicAuth() bool](<config.go#L376>)
 
 IsBasicAuth returns true if both username and password is set,
 
@@ -93,7 +94,7 @@ CLI flags override config file values.
 func NewConfig() (*Config, error)
 ```
 
-## type [Log](<config.go#L309>)
+## type [Log](<config.go#L383>)
 
 Log holds logging configuration.
 ```go
@@ -105,7 +106,7 @@ type Log struct {
 }
 ```
 
-## func (*Log) [SLogLevel() slog](<config.go#L318>)
+## func (*Log) [SLogLevel() slog](<config.go#L392>)
 
 SLogLevel returns logging level in slog format.
 Default is level info.
@@ -115,13 +116,13 @@ Default is level info.
 func (l *Log) SLogLevel() slog.Level
 ```
 
-## type [Pihole](<config.go#L240>)
+## type [Pihole](<config.go#L290>)
 
 Pihole holds PiHole server configuration data.
 ```go
 type Pihole struct {
 	// PiHole server address
-	Listen	string	`yaml:"listen,omitempty"`
+	ListenAddress	string	`yaml:"listen_address,omitempty"`
 	// TLS config for PiHole server connection
 	TLS	*TLS	`yaml:"tls,omitempty"`
 	// Basic auth config for PiHole server connection
@@ -136,7 +137,7 @@ type Pihole struct {
 }
 ```
 
-## func (*Pihole) [GetAPIPath() string](<config.go#L274>)
+## func (*Pihole) [GetAPIPath() string](<config.go#L324>)
 
 GetAPIPath returns PiHole API path. Defaults to `/admin/api.php`.
 
@@ -144,7 +145,7 @@ GetAPIPath returns PiHole API path. Defaults to `/admin/api.php`.
 ```go
 func (cfg *Pihole) GetAPIPath() string
 ```
-## func (*Pihole) [IsBasicAuth() bool](<config.go#L282>)
+## func (*Pihole) [IsBasicAuth() bool](<config.go#L332>)
 
 IsBasicAuth return whether basic auth is enabled.
 
@@ -152,7 +153,7 @@ IsBasicAuth return whether basic auth is enabled.
 ```go
 func (cfg *Pihole) IsBasicAuth() bool
 ```
-## func (*Pihole) [IsTLS() bool](<config.go#L257>)
+## func (*Pihole) [IsTLS() bool](<config.go#L307>)
 
 IsTLS return whether TLS is enabled.
 
@@ -161,23 +162,32 @@ IsTLS return whether TLS is enabled.
 func (cfg *Pihole) IsTLS() bool
 ```
 
-## type [TLS](<config.go#L290>)
+## type [TLS](<config.go#L340>)
 
 TLS holds TLS configuration.
 ```go
 type TLS struct {
 	// Path to a root CA certificate
-	CACertificate	string	`yaml:"ca_certificate.omitempty"`
+	CACertificate	string	`yaml:"ca_certificate,omitempty"`
 	// Path to a server or client certificate
-	Certificate	string	`yaml:"certificate.omitempty"`
+	Certificate	string	`yaml:"certificate,omitempty"`
 	// Path to a certificate private key
-	Key	string	`yaml:"key.omitempty"`
+	Key	string	`yaml:"key,omitempty"`
 	// Do not verify TLS certificate validity
-	Insecure	bool	`yaml:"insecure.omitempty"`
+	Insecure	bool	`yaml:"insecure,omitempty"`
 }
 ```
 
-## type [Web](<config.go#L207>)
+## func (*TLS) [IsTLS() bool](<config.go#L352>)
+
+IsSet returns if TLS config is set for TLS
+
+
+```go
+func (cfg *TLS) IsTLS() bool
+```
+
+## type [Web](<config.go#L257>)
 
 Web holds PiHole exporter metrics server configuration data.
 ```go
@@ -194,7 +204,7 @@ type Web struct {
 }
 ```
 
-## func (*Web) [IsBasicAuth() bool](<config.go#L232>)
+## func (*Web) [IsBasicAuth() bool](<config.go#L282>)
 
 IsBasicAuth return whether basic auth is enabled.
 
@@ -202,7 +212,7 @@ IsBasicAuth return whether basic auth is enabled.
 ```go
 func (cfg *Web) IsBasicAuth() bool
 ```
-## func (*Web) [IsTLS() bool](<config.go#L220>)
+## func (*Web) [IsTLS() bool](<config.go#L270>)
 
 IsTLS return whether TLS is enabled.
 

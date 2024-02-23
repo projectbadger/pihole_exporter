@@ -1,0 +1,29 @@
+name: Test
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    # Setup Go
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'    
+    # Install all the dependencies
+    - name: Install dependencies
+      run: |
+        go version
+        go mod tidy
+    # Run testing on the code
+    - name: Run testing
+      run: go test ./... -v -cover
+    # Run build of the application
+    - name: Run build
+      run: CGO_ENABLED=0 go build -ldflags="-X 'pihole_exporter/config.PackageName=pihole_exporter' -X 'pihole_exporter/config.Version=${{ github.ref_name }}'" -o pihole_exporter .
+

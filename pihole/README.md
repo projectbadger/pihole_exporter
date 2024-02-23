@@ -22,7 +22,7 @@ It returns metrics from the PiHole admin API endpoint.
 - [type TimeRelative](#type-timerelative)
 
 
-## type [Client](<pihole.go#L51>)
+## type [Client](<pihole.go#L53>)
 
 Client holds PiHole client configuration.
 It can query the remote PiHole server for data and return it
@@ -33,7 +33,7 @@ type Client struct {
 }
 ```
 
-## func [NewClient() (Client, error)](<pihole.go#L63>)
+## func [NewClient() (Client, error)](<pihole.go#L65>)
 
 NewClient returns new *Client from *config.Pihole settings.
 
@@ -42,7 +42,7 @@ NewClient returns new *Client from *config.Pihole settings.
 func NewClient(cfg *config.Pihole) (*Client, error)
 ```
 
-## func (*Client) [GetMetrics() (Metrics, error)](<pihole.go#L138>)
+## func (*Client) [GetMetrics() (Metrics, error)](<pihole.go#L187>)
 
 GetMetrics sends a request to the remote PiHole API endpoint
 and returns the data as *Metrics.
@@ -52,7 +52,7 @@ and returns the data as *Metrics.
 func (client *Client) GetMetrics() (*Metrics, error)
 ```
 
-## type [GravityLastUpdated](<metrics.go#L63>)
+## type [GravityLastUpdated](<metrics.go#L64>)
 
 GravityLastUpdated holds gravity_last_updated data from
 PiHole statistics
@@ -84,7 +84,7 @@ type Metrics struct {
 	ReplyNXDOMAIN		float64			`json:"reply_NXDOMAIN,omitempty"`
 	ReplyCNAME		float64			`json:"reply_CNAME,omitempty"`
 	ReplyIP			float64			`json:"reply_IP,omitempty"`
-	ReplyDomain		float64			`json:"reply_DOMAIN,omitempty"`
+	ReplyDOMAIN		float64			`json:"reply_DOMAIN,omitempty"`
 	ReplyRRNAME		float64			`json:"reply_RRNAME,omitempty"`
 	ReplySERVFAIL		float64			`json:"reply_SERVFAIL,omitempty"`
 	ReplyREFUSED		float64			`json:"reply_REFUSED,omitempty"`
@@ -114,7 +114,7 @@ different types
 func (m *Metrics) GetRepliesMap() map[string]float64
 ```
 
-## type [TimeRelative](<metrics.go#L69>)
+## type [TimeRelative](<metrics.go#L70>)
 ```go
 type TimeRelative struct {
 	Days	int	`json:"days"`

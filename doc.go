@@ -51,6 +51,9 @@ pihole_domains_being_blocked 154587
 # HELP pihole_privacy_level Privacy level
 # TYPE pihole_privacy_level gauge
 pihole_privacy_level 0
+# HELP pihole_status Status
+# TYPE pihole_status gauge
+pihole_privacy_level 0
 # HELP pihole_queries_cached Cached queries
 # TYPE pihole_queries_cached gauge
 pihole_queries_cached 55653

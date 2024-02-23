@@ -16,7 +16,15 @@ LDFLAGS = -X '$(PACKAGE_NAME)/config.PackageName=$(PACKAGE_NAME)' -X '$(PACKAGE_
 RUN_PORT ?= 9311
 
 test:
-	go test ./...
+	$(GO_CMD) test ./... -cover -coverprofile=c.out
+	$(GO_CMD) tool cover -html=c.out -o coverage.html
+	rm -f c.out
+	echo "Coverage report: './coverage.html'" > /dev/null
+
+test-verbose:
+	$(GO_CMD) test ./... -v -cover -coverprofile=c.out
+	$(GO_CMD) tool cover -html=c.out -o coverage.html
+	rm -f c.out
 
 get-pkg:
 	# go install github.com/projectbadger/autodoc@latest

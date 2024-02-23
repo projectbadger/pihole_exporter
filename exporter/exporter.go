@@ -1,12 +1,17 @@
 package exporter
 
 import (
+	"errors"
 	"log/slog"
 
 	"github.com/prometheus/client_golang/prometheus"
 
 	"pihole_exporter/config"
 	"pihole_exporter/pihole"
+)
+
+var (
+	errInvalidConfig = errors.New("invalid config")
 )
 
 // Exporter collects Pihole metrics from the given address and
@@ -19,7 +24,10 @@ type Exporter struct {
 
 // NewExporter returns an initialized Exporter.
 func NewExporter(cfg *config.Config) (*Exporter, error) {
-	slog.Info("Seting up Pihole exporter", "url", cfg.Pihole.Listen)
+	if cfg == nil || cfg.Pihole == nil {
+		return nil, errInvalidConfig
+	}
+	slog.Info("Seting up Pihole exporter", "url", cfg.Pihole.ListenAddress)
 	pihole, err := pihole.NewClient(cfg.Pihole)
 	if err != nil {
 		return nil, err
@@ -33,6 +41,9 @@ func NewExporter(cfg *config.Config) (*Exporter, error) {
 // Describe publishes all of the collected PiHole metrics to the
 // provided channel by calling the underlying *metrics.Describe(ch).
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
+	if e.metrics == nil {
+		return
+	}
 	e.metrics.Describe(ch)
 }
 
@@ -58,8 +69,12 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.sendMetric(ch, resp.DNSQueriesAllTypes, e.metrics.dnsQueriesAllTypes)
 	e.sendMetric(ch, resp.DNSQueriesAllReplies, e.metrics.dnsQueriesAllReplies)
 	e.sendMetric(ch, resp.PrivacyLevel, e.metrics.privacyLevel)
+	var status float64 = 0
+	if resp.Status == "enabled" {
+		status = 1
+	}
+	e.sendMetric(ch, status, e.metrics.status)
 	e.sendMetric(ch, float64(resp.GravityLastUpdated.Absolute), e.metrics.gravityLastUpdated)
-	// e.sendMetric(ch, resp.Status, e.metrics.status)
 	for domain, hits := range resp.TopQueries {
 		e.sendMetric(ch, hits, e.metrics.topQueries, domain)
 	}

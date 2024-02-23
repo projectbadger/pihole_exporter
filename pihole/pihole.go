@@ -33,6 +33,7 @@ var (
 	// Errors
 	errClientIsNil          = errors.New("client is nil")
 	errInvalidPiHoleAddress = errors.New("invalid pihole address")
+	errMetricsURLIsNil      = errors.New("metrics url is nil")
 	// Pihole API query variables
 	piholeAPIQueryVariables = []string{
 		"summaryRaw",
@@ -64,15 +65,55 @@ const (
 func NewClient(cfg *config.Pihole) (*Client, error) {
 	slog.Debug("Setting up PiHole client")
 
-	if !strings.HasPrefix(cfg.Listen, "http://") &&
-		!strings.HasPrefix(cfg.Listen, "https://") &&
-		!strings.HasPrefix(cfg.Listen, "unix://") {
-		if cfg.TLS != nil && cfg.TLS.CACertificate != "" {
-			cfg.Listen = "https://" + cfg.Listen
-		}
+	cfg.ListenAddress = getPiholeListenAddress(cfg)
+
+	metricsURL, err := getMetricsURL(cfg)
+	if err != nil {
+		return nil, err
 	}
 
-	metricsURL, err := url.Parse(strings.Trim(cfg.Listen, "/") + cfg.GetAPIPath())
+	client := getHTTPClient(cfg)
+
+	slog.Debug("Set up PiHole client")
+
+	return &Client{
+		client:     client,
+		basicAuth:  cfg.BasicAuth,
+		metricsURL: metricsURL,
+	}, nil
+}
+
+// getPiholeListenAddress returns PiHole server listener address.
+func getPiholeListenAddress(cfg *config.Pihole) string {
+	if cfg.ListenAddress == "" {
+		return ""
+	}
+	if _, err := url.Parse(cfg.ListenAddress); err != nil {
+		return ""
+	}
+	if !strings.HasPrefix(cfg.ListenAddress, "http://") &&
+		!strings.HasPrefix(cfg.ListenAddress, "https://") &&
+		!strings.HasPrefix(cfg.ListenAddress, "unix://") {
+		if cfg.TLS != nil && cfg.IsTLS() {
+			return "https://" + cfg.ListenAddress
+		} else {
+			return "http://" + cfg.ListenAddress
+		}
+	}
+	return cfg.ListenAddress
+}
+
+// getMetricsURL returns the whole PiHole server API request URL.
+func getMetricsURL(cfg *config.Pihole) (*url.URL, error) {
+	metricsURL, err := url.Parse(strings.Trim(cfg.ListenAddress, "/") + cfg.GetAPIPath())
+
+	if err != nil || (metricsURL.Scheme != "http" && metricsURL.Scheme != "https") {
+		if err != nil {
+			return nil, err
+		}
+		return nil, errInvalidPiHoleAddress
+	}
+
 	metricsQuery := metricsURL.Query()
 	for _, queryVar := range piholeAPIQueryVariables {
 		if cfg.NumResults > 0 {
@@ -86,13 +127,12 @@ func NewClient(cfg *config.Pihole) (*Client, error) {
 	}
 	metricsURL.RawQuery = metricsQuery.Encode()
 
-	if err != nil || (metricsURL.Scheme != "http" && metricsURL.Scheme != "https") {
-		if err != nil {
-			return nil, err
-		}
-		return nil, errInvalidPiHoleAddress
-	}
+	return metricsURL, nil
+}
 
+// getHTTPClient returns a *http.Client, configured by the provided
+// *config.Pihole config.
+func getHTTPClient(cfg *config.Pihole) *http.Client {
 	client := http.DefaultClient
 
 	if cfg.TLS != nil {
@@ -114,14 +154,7 @@ func NewClient(cfg *config.Pihole) (*Client, error) {
 
 		client = &http.Client{Transport: tr}
 	}
-
-	slog.Debug("Set up PiHole client")
-
-	return &Client{
-		client:     client,
-		basicAuth:  cfg.BasicAuth,
-		metricsURL: metricsURL,
-	}, nil
+	return client
 }
 
 // setupHeaders sets up Content-Type, Accept and User-Agent headers
@@ -137,6 +170,18 @@ func (c *Client) setupHeaders(request *http.Request) {
 	}
 }
 
+func (c *Client) getPiholeMetricsRequest() (*http.Request, error) {
+	if c.metricsURL == nil {
+		return nil, errMetricsURLIsNil
+	}
+	piholeRequest, err := http.NewRequest("GET", c.metricsURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	c.setupHeaders(piholeRequest)
+	return piholeRequest, nil
+}
+
 // GetMetrics sends a request to the remote PiHole API endpoint
 // and returns the data as *Metrics.
 func (client *Client) GetMetrics() (*Metrics, error) {
@@ -146,11 +191,10 @@ func (client *Client) GetMetrics() (*Metrics, error) {
 		return nil, errClientIsNil
 	}
 
-	piholeRequest, err := http.NewRequest("GET", client.metricsURL.String(), nil)
+	piholeRequest, err := client.getPiholeMetricsRequest()
 	if err != nil {
 		return nil, err
 	}
-	client.setupHeaders(piholeRequest)
 	resp, err := client.client.Do(piholeRequest)
 	if err != nil {
 		return nil, err
